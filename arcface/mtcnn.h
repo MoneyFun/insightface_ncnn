@@ -17,8 +17,8 @@ public:
     ~MtcnnDetector();
     vector<FaceInfo> Detect(ncnn::Mat img);
 private:
-    float minsize = 20;
-    float threshold[3] = {0.6f, 0.7f, 0.8f};
+    float minsize = 50;
+    float threshold[3] = {0.99f, 0.99f, 0.99f};
     float factor = 0.709f;
     const float mean_vals[3] = {127.5f, 127.5f, 127.5f};
     const float norm_vals[3] = {0.0078125f, 0.0078125f, 0.0078125f};
