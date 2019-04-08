@@ -3,9 +3,14 @@
 #include <opencv2/opencv.hpp>
 #include "arcface.h"
 #include "mtcnn.h"
+
+#include "dlib/opencv.h"
 #include "dlib/model_utils.hpp"
+#include "dlib/image_processing/frontal_face_detector.h"
 using namespace cv;
 using namespace std;
+
+#define FACE_COUNT 5
 
 cv::Mat ncnn2cv(ncnn::Mat img)
 {
@@ -26,30 +31,26 @@ cv::Mat ncnn2cv(ncnn::Mat img)
 
 int main(int argc, char* argv[])
 {
-    Mat img1;
-    Mat img2;
-    if (argc == 3) {
-        img1 = imread(argv[1]);
-        img2 = imread(argv[2]);
-    } else {
-        img1 = imread("zhuqinghua.jpg");
-        img2 = imread("wangyuanfei.jpg");
-    }
-    ncnn::Mat ncnn_img1 = ncnn::Mat::from_pixels(img1.data, ncnn::Mat::PIXEL_BGR, img1.cols, img1.rows);
-    ncnn::Mat ncnn_img2 = ncnn::Mat::from_pixels(img2.data, ncnn::Mat::PIXEL_BGR, img2.cols, img2.rows);
+    Mat img[FACE_COUNT];
+    vector<FaceInfo> results[FACE_COUNT];
+    ncnn::Mat ncnn_img[FACE_COUNT];
+    ncnn::Mat det[FACE_COUNT];
+    vector<float> feature[FACE_COUNT];
+    Arcface arc("../models");
 
     MtcnnDetector detector("../models");
 
-    double start = (double)getTickCount();
-    vector<FaceInfo> results1 = detector.Detect(ncnn_img1);
-    cout << "Detection Time: " << (getTickCount() - start) / getTickFrequency() << "s" << std::endl;
-
-    start = (double)getTickCount();
-    vector<FaceInfo> results2 = detector.Detect(ncnn_img2);
-    cout << "Detection Time: " << (getTickCount() - start) / getTickFrequency() << "s" << std::endl;
-
-    ncnn::Mat det1 = preprocess(ncnn_img1, results1[0]);
-    ncnn::Mat det2 = preprocess(ncnn_img2, results2[0]);
+    img[0] = imread("../image/zhuqinghua.jpg");
+    img[1] = imread("../image/wangyuanfei.jpg");
+    img[2] = imread("../image/jiuge.jpg");
+    img[3] = imread("../image/fbb1.jpeg");
+    img[4] = imread("../image/gyy1.jpeg");
+    for (int i = 0; i < FACE_COUNT; i ++){
+        ncnn_img[i] = ncnn::Mat::from_pixels(img[i].data, ncnn::Mat::PIXEL_BGR, img[i].cols, img[i].rows);
+        results[i] = detector.Detect(ncnn_img[i]);
+        det[i] = preprocess(ncnn_img[i], results[i][0]);
+        feature[i] = arc.getFeature(det[i]);
+    }
 
     //for (auto it = results1.begin(); it != results1.end(); it++)
     //{
@@ -71,31 +72,20 @@ int main(int argc, char* argv[])
     //    circle(img2, cv::Point(it->landmark[8], it->landmark[9]), 2, cv::Scalar(0, 255, 0), 2);
     //}
 
-    Arcface arc("../models");
-
-    start = (double)getTickCount();
-    vector<float> feature1 = arc.getFeature(det1);
-    cout << "Extraction Time: " << (getTickCount() - start) / getTickFrequency() << "s" << std::endl;
-
-    start = (double)getTickCount();
-    vector<float> feature2 = arc.getFeature(det2);
-    cout << "Extraction Time: " << (getTickCount() - start) / getTickFrequency() << "s" << std::endl;
-
-    std::cout << "Similarity: " << calcSimilar(feature1, feature2) << std::endl;
-
-    //imshow("img1", img1);
-    //imshow("img2", img2);
-
-    //imshow("det1", ncnn2cv(det1));
-    //imshow("det2", ncnn2cv(det2));
-
     //waitKey(1000);
+    dlib::frontal_face_detector dlib_detector = dlib::get_frontal_face_detector();
+    dlib::shape_predictor pose_model;
+    med::load_shape_predictor_model(pose_model, "shape_predictor_68_face_landmarks_small.dat");
+    dlib::full_object_detection detect_result;
+    dlib::point p;
 
     VideoCapture capture(-1);
     while (1)
     {
         Mat frame;
         capture >> frame;
+        int width;
+        int height;
 
         ncnn::Mat ncnn_img3 = ncnn::Mat::from_pixels(frame.data, ncnn::Mat::PIXEL_BGR, frame.cols, frame.rows);
         vector<FaceInfo> results3 = detector.Detect(ncnn_img3);
@@ -108,13 +98,36 @@ int main(int argc, char* argv[])
             //    cout << results3[0].landmark[i] << endl;
             ncnn::Mat det3 = preprocess(ncnn_img3, results3[0]);
             vector<float> feature3 = arc.getFeature(det3);
-            std::cout << "zhuqinghua Similarity: " << calcSimilar(feature1, feature3) << std::endl;
-            std::cout << "wangyuanfei Similarity: " << calcSimilar(feature2, feature3) << std::endl;
+            for (int i = 0; i < FACE_COUNT; i ++){
+                std::cout << i <<  "Similarity: " << calcSimilar(feature[i], feature3) << std::endl;
+            }
 
             rectangle(frame, Point(results3[0].x[0], results3[0].y[0]),
                 Point(results3[0].x[1], results3[0].y[1]), cv::Scalar(0, 255, 255), 2, 4);
+            width = results3[0].x[1] - results3[0].x[0];
+            height = results3[0].y[1] - results3[0].y[0];
+
+            Mat faceFrame = frame(Rect(results3[0].x[0], results3[0].y[0], width, height));
+
+            dlib::cv_image<dlib::bgr_pixel> cimg(faceFrame);
+
+            std::vector<dlib::rectangle> faces = dlib_detector(cimg);
+            // Find the pose of each face.
+            // std::vector<full_object_detection> shapes;
+
+            for (unsigned long i = 0; i < faces.size(); ++i)
+                //pose_model(cimg, faces[i]);
+                detect_result = pose_model(cimg, faces[i]);
+            #if 0
+            for (char j = 0; j < detect_result.num_parts(); j++) {
+                p = detect_result.part(j);
+                cv::circle(faceFrame, cv::Point(p.x(), p.y()), 3, cv::Scalar(255,0,0), -1);
+            }
+            #endif
+            imshow("faceFrame", faceFrame);
         }
         imshow("camera", frame);
+
         char key = waitKey(1);
         printf("%d\n", (int)time(NULL));
         switch(key){
