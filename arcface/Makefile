@@ -1,14 +1,14 @@
 CXX = g++
 COMMON = `pkg-config --cflags opencv`
-LIB = ../ncnn/lib/libncnn.a
+LIB = ../lib/ncnn/libncnn.a
 LIB += `pkg-config --libs opencv`
-INCLUDE = -I../ncnn/include
+INCLUDE = -I../include/ncnn
 COMMON += -fopenmp -pthread -std=c++11
 DEPS = $(wildcard *.h)
 OBJ = base.o mtcnn.o arcface.o
 all : main
 main : main.cpp $(OBJ)
-	$(CXX) $(COMMON) $(INCLUDE) $^ -o $@ $(LIB) -L../ncnn/lib/ippicv_lnx/lib/intel64
+	$(CXX) $(COMMON) $(INCLUDE) $^ -o $@ $(LIB) -L../lib/ncnn/ippicv_lnx/lib/intel64
 %.o : %.cpp $(DEPS)
 	$(CXX) $(COMMON) $(INCLUDE) -c $< -o $@
 .PHONY : clean
