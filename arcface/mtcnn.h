@@ -6,7 +6,7 @@
 #include <string>
 #include <cstring>
 #include <algorithm>
-#include "net.h"
+#include "ncnn/net.h"
 #include "base.h"
 
 using namespace std;

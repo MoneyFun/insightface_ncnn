@@ -4,7 +4,7 @@
 #include <cmath>
 #include <vector>
 #include <string>
-#include "net.h"
+#include "ncnn/net.h"
 #include "base.h"
 
 using namespace std;

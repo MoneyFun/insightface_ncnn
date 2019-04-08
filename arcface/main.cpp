@@ -3,6 +3,7 @@
 #include <opencv2/opencv.hpp>
 #include "arcface.h"
 #include "mtcnn.h"
+#include "dlib/model_utils.hpp"
 using namespace cv;
 using namespace std;
 
@@ -27,12 +28,10 @@ int main(int argc, char* argv[])
 {
     Mat img1;
     Mat img2;
-    if (argc == 3)
-    {
+    if (argc == 3) {
         img1 = imread(argv[1]);
         img2 = imread(argv[2]);
-    }
-    else{
+    } else {
         img1 = imread("zhuqinghua.jpg");
         img2 = imread("wangyuanfei.jpg");
     }
@@ -51,7 +50,7 @@ int main(int argc, char* argv[])
 
     ncnn::Mat det1 = preprocess(ncnn_img1, results1[0]);
     ncnn::Mat det2 = preprocess(ncnn_img2, results2[0]);
-    
+
     //for (auto it = results1.begin(); it != results1.end(); it++)
     //{
     //    rectangle(img1, cv::Point(it->x[0], it->y[0]), cv::Point(it->x[1], it->y[1]), cv::Scalar(0, 255, 0), 2);
@@ -105,14 +104,14 @@ int main(int argc, char* argv[])
             // printf("x[1]:%d\n", results3[0].x[1]);
             // printf("y[0]:%d\n", results3[0].y[0]);
             // printf("y[1]:%d\n", results3[0].y[1]);
-            for(int i = 0;i < 10;i ++)
-                cout << results3[0].landmark[i] << endl;
+            // for(int i = 0;i < 10;i ++)
+            //    cout << results3[0].landmark[i] << endl;
             ncnn::Mat det3 = preprocess(ncnn_img3, results3[0]);
             vector<float> feature3 = arc.getFeature(det3);
             std::cout << "zhuqinghua Similarity: " << calcSimilar(feature1, feature3) << std::endl;
             std::cout << "wangyuanfei Similarity: " << calcSimilar(feature2, feature3) << std::endl;
 
-            rectangle(frame, Point(results3[0].x[0], results3[0].y[0]), 
+            rectangle(frame, Point(results3[0].x[0], results3[0].y[0]),
                 Point(results3[0].x[1], results3[0].y[1]), cv::Scalar(0, 255, 255), 2, 4);
         }
         imshow("camera", frame);

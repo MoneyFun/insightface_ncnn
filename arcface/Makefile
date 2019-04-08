@@ -2,7 +2,7 @@ CXX = g++
 COMMON = `pkg-config --cflags opencv`
 LIB = ../lib/ncnn/libncnn.a
 LIB += `pkg-config --libs opencv`
-INCLUDE = -I../include/ncnn
+INCLUDE = -I../include
 COMMON += -fopenmp -pthread -std=c++11
 DEPS = $(wildcard *.h)
 OBJ = base.o mtcnn.o arcface.o
@@ -14,4 +14,3 @@ main : main.cpp $(OBJ)
 .PHONY : clean
 clean :
 	rm -rf $(OBJ) main
-
