@@ -96,6 +96,8 @@ cv::Mat ncnn2cv(ncnn::Mat img)
     return cv_img;
 }
 
+#define ANGLE_DIMENSION 3
+
 int main(int argc, char* argv[])
 {
     Mat img[FACE_COUNT];
@@ -104,6 +106,9 @@ int main(int argc, char* argv[])
     ncnn::Mat det[FACE_COUNT];
     vector<float> feature[FACE_COUNT];
     Arcface arc("../models");
+    //3 X,Y,Z
+    float angle[ANGLE_DIMENSION] = {0};
+    float mouth_open_level = 0;
 
     MtcnnDetector detector("../models");
 
@@ -161,20 +166,26 @@ int main(int argc, char* argv[])
                 cout << j << ":" << p.x() << endl;
             }
 #endif
-#if 1
-            Mat euler_angle = calcAngle(detect_result);
-            cout << euler_angle.at<double>(0) << endl;
 
-            outtext << "X: " << std::setprecision(3) << euler_angle.at<double>(0);
-            cv::putText(frame, outtext.str(), cv::Point(50, 40), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 0, 0));
+
+            mouth_open_level = mouth_open_level * 0.9 + abs(0.1 * (detect_result.part(57).y() - detect_result.part(51).y())/
+                (detect_result.part(54).x() - detect_result.part(48).x()));
+
+            outtext << std::setprecision(2) << mouth_open_level;
+            cv::putText(frame, outtext.str(), cv::Point(50, 100), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 0, 0));
             outtext.str("");
-            outtext << "Y: " << std::setprecision(3) << euler_angle.at<double>(1);
-            cv::putText(frame, outtext.str(), cv::Point(50, 60), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 0, 0));
-            outtext.str("");
-            outtext << "Z: " << std::setprecision(3) << euler_angle.at<double>(2);
-            cv::putText(frame, outtext.str(), cv::Point(50, 80), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 0, 0));
-            outtext.str("");
-#endif
+
+            Mat euler_angle = calcAngle(detect_result);
+            for(int i = 0; i < ANGLE_DIMENSION; i++)
+                angle[i] = angle[i] * 0.95 + 0.05 * euler_angle.at<double>(i);
+
+            int x = 50;
+            int y = 60;
+            for(int i = 0; i < ANGLE_DIMENSION; i++) {
+                outtext << std::setprecision(2) << angle[i];
+                cv::putText(frame, outtext.str(), cv::Point(50, 40 + 20 * i), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 0, 0));
+                outtext.str("");
+            }
         }
         imshow("camera", frame);
 
