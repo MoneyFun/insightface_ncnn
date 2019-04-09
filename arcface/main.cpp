@@ -39,8 +39,6 @@ Mat calcAngle(dlib::full_object_detection shape) {
     object_pts.push_back(cv::Point3d(0.000000, -3.116408, 6.097667));    //#45 mouth central bottom corner
     object_pts.push_back(cv::Point3d(0.000000, -7.415691, 4.070434));    //#6 chin corner
 
-
-
     //result
     cv::Mat rotation_vec;                           //3 x 1
     cv::Mat rotation_mat;                           //3 x 3 R
@@ -79,7 +77,6 @@ Mat calcAngle(dlib::full_object_detection shape) {
     cv::decomposeProjectionMatrix(pose_mat, out_intrinsics, out_rotation, out_translation, cv::noArray(), cv::noArray(), cv::noArray(), euler_angle);
 
     return euler_angle;
-
 }
 
 cv::Mat ncnn2cv(ncnn::Mat img)
@@ -122,35 +119,13 @@ int main(int argc, char* argv[])
         feature[i] = arc.getFeature(det[i]);
     }
 
-    //for (auto it = results1.begin(); it != results1.end(); it++)
-    //{
-    //    rectangle(img1, cv::Point(it->x[0], it->y[0]), cv::Point(it->x[1], it->y[1]), cv::Scalar(0, 255, 0), 2);
-    //    circle(img1, cv::Point(it->landmark[0], it->landmark[1]), 2, cv::Scalar(0, 255, 0), 2);
-    //    circle(img1, cv::Point(it->landmark[2], it->landmark[3]), 2, cv::Scalar(0, 255, 0), 2);
-    //    circle(img1, cv::Point(it->landmark[4], it->landmark[5]), 2, cv::Scalar(0, 255, 0), 2);
-    //    circle(img1, cv::Point(it->landmark[6], it->landmark[7]), 2, cv::Scalar(0, 255, 0), 2);
-    //    circle(img1, cv::Point(it->landmark[8], it->landmark[9]), 2, cv::Scalar(0, 255, 0), 2);
-    //}
-
-    //for (auto it = results2.begin(); it != results2.end(); it++)
-    //{
-    //    rectangle(img2, cv::Point(it->x[0], it->y[0]), cv::Point(it->x[1], it->y[1]), cv::Scalar(0, 255, 0), 2);
-    //    circle(img2, cv::Point(it->landmark[0], it->landmark[1]), 2, cv::Scalar(0, 255, 0), 2);
-    //    circle(img2, cv::Point(it->landmark[2], it->landmark[3]), 2, cv::Scalar(0, 255, 0), 2);
-    //    circle(img2, cv::Point(it->landmark[4], it->landmark[5]), 2, cv::Scalar(0, 255, 0), 2);
-    //    circle(img2, cv::Point(it->landmark[6], it->landmark[7]), 2, cv::Scalar(0, 255, 0), 2);
-    //    circle(img2, cv::Point(it->landmark[8], it->landmark[9]), 2, cv::Scalar(0, 255, 0), 2);
-    //}
-
-    //waitKey(1000);
-    dlib::frontal_face_detector dlib_detector = dlib::get_frontal_face_detector();
     dlib::shape_predictor pose_model;
     med::load_shape_predictor_model(pose_model, "shape_predictor_68_face_landmarks_small.dat");
     dlib::full_object_detection detect_result;
     dlib::point p;
     std::ostringstream outtext;
 
-    VideoCapture capture(-1);
+    VideoCapture capture(1);
     while (1)
     {
         Mat frame;
@@ -161,12 +136,6 @@ int main(int argc, char* argv[])
         ncnn::Mat ncnn_img3 = ncnn::Mat::from_pixels(frame.data, ncnn::Mat::PIXEL_BGR, frame.cols, frame.rows);
         vector<FaceInfo> results3 = detector.Detect(ncnn_img3);
         if(results3.size() > 0){
-            // printf("x[0]:%d\n", results3[0].x[0]);
-            // printf("x[1]:%d\n", results3[0].x[1]);
-            // printf("y[0]:%d\n", results3[0].y[0]);
-            // printf("y[1]:%d\n", results3[0].y[1]);
-            // for(int i = 0;i < 10;i ++)
-            //    cout << results3[0].landmark[i] << endl;
             ncnn::Mat det3 = preprocess(ncnn_img3, results3[0]);
             vector<float> feature3 = arc.getFeature(det3);
             for (int i = 0; i < FACE_COUNT; i ++){
@@ -178,38 +147,34 @@ int main(int argc, char* argv[])
             width = results3[0].x[1] - results3[0].x[0];
             height = results3[0].y[1] - results3[0].y[0];
 
+            dlib::rectangle face(results3[0].x[0], results3[0].y[0], results3[0].x[1], results3[0].y[1]);
+
             // Mat faceFrame = frame(Rect(results3[0].x[0], results3[0].y[0], width, height));
 
             dlib::cv_image<dlib::bgr_pixel> cimg(frame);
 
-            std::vector<dlib::rectangle> faces = dlib_detector(cimg);
-            // Find the pose of each face.
-            // std::vector<full_object_detection> shapes;
-
-
-            if (faces.size() > 0) {
-                detect_result = pose_model(cimg, faces[0]);
+            detect_result = pose_model(cimg, face);
 #if 0
-                for (char j = 0; j < detect_result.num_parts(); j++) {
-                    p = detect_result.part(j);
-                    cv::circle(faceFrame, cv::Point(p.x(), p.y()), 3, cv::Scalar(255,0,0), -1);
-                }
+            for (int j = 0; j < detect_result.num_parts(); j++) {
+                p = detect_result.part(j);
+                cv::circle(frame, cv::Point(p.x(), p.y()), 3, cv::Scalar(255,0,0), -1);
+                cout << j << ":" << p.x() << endl;
+            }
 #endif
 #if 1
-                Mat euler_angle = calcAngle(detect_result);
+            Mat euler_angle = calcAngle(detect_result);
+            cout << euler_angle.at<double>(0) << endl;
 
-                outtext << "X: " << std::setprecision(3) << euler_angle.at<double>(0);
-                cv::putText(frame, outtext.str(), cv::Point(50, 40), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 0, 0));
-                outtext.str("");
-                outtext << "Y: " << std::setprecision(3) << euler_angle.at<double>(1);
-                cv::putText(frame, outtext.str(), cv::Point(50, 60), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 0, 0));
-                outtext.str("");
-                outtext << "Z: " << std::setprecision(3) << euler_angle.at<double>(2);
-                cv::putText(frame, outtext.str(), cv::Point(50, 80), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 0, 0));
-                outtext.str("");
+            outtext << "X: " << std::setprecision(3) << euler_angle.at<double>(0);
+            cv::putText(frame, outtext.str(), cv::Point(50, 40), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 0, 0));
+            outtext.str("");
+            outtext << "Y: " << std::setprecision(3) << euler_angle.at<double>(1);
+            cv::putText(frame, outtext.str(), cv::Point(50, 60), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 0, 0));
+            outtext.str("");
+            outtext << "Z: " << std::setprecision(3) << euler_angle.at<double>(2);
+            cv::putText(frame, outtext.str(), cv::Point(50, 80), cv::FONT_HERSHEY_SIMPLEX, 0.75, cv::Scalar(0, 0, 0));
+            outtext.str("");
 #endif
-                // imshow("faceFrame", faceFrame);
-            }
         }
         imshow("camera", frame);
 
