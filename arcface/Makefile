@@ -8,10 +8,9 @@ DEPS = $(wildcard *.h)
 OBJ = base.o mtcnn.o arcface.o
 all : main
 main : main.cpp $(OBJ)
-	$(CXX) $(COMMON) $(INCLUDE) $^ -o $@ $(LIB) -L../ncnn/lib/ippicv_lnx/lib/intel64
+	$(CXX) $(COMMON) $(INCLUDE) $^ -o $@ $(LIB)
 %.o : %.cpp $(DEPS)
 	$(CXX) $(COMMON) $(INCLUDE) -c $< -o $@
 .PHONY : clean
 clean :
 	rm -rf $(OBJ) main
-
